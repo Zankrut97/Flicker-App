@@ -1,4 +1,4 @@
-# BrighterScript Template
+# Flicker App
 
 This project is created from the template project written in [BrighterScript](https://github.com/rokucommunity/brighterscript)
 
