@@ -1,0 +1,94 @@
+' constants
+const DEFAULT_WIDTH = 300
+const DEFAULT_HEIGHT = 250
+const IMAGE_HEIGHT = 200
+const TITLE_HEIGHT = 45
+
+' styling constants
+const PLACEHOLDER_IMAGE = "pkg:/images/placeholder.png"
+const TITLE_FONT = "font:SmallSystemFont"
+const TITLE_COLOR = "0xFFFFFFFF"
+
+sub init()
+    setupNodes()
+    applyStyles()
+end sub
+
+sub setupNodes()
+    m.cardContainer = m.top.findNode("cardContainer")
+    m.cardImage = m.top.findNode("cardImage")
+    m.cardTitle = m.top.findNode("cardTitle")
+end sub
+
+sub applyStyles()
+    if m.cardImage <> invalid
+        m.cardImage.width = DEFAULT_WIDTH
+        m.cardImage.height = IMAGE_HEIGHT
+        m.cardImage.loadDisplayMode = "scaleToZoom"
+        m.cardImage.loadingBitmapUri = PLACEHOLDER_IMAGE
+        m.cardImage.failedBitmapUri = PLACEHOLDER_IMAGE
+    end if
+
+    if m.cardTitle <> invalid
+        m.cardTitle.translation = [0, IMAGE_HEIGHT + 5]
+        m.cardTitle.width = DEFAULT_WIDTH
+        m.cardTitle.height = 40
+        m.cardTitle.font = TITLE_FONT
+        m.cardTitle.color = TITLE_COLOR
+        m.cardTitle.horizAlign = "center"
+        m.cardTitle.vertAlign = "center"
+        m.cardTitle.maxLines = 1
+        m.cardTitle.ellipsizeOnBoundary = true
+    end if
+end sub
+
+' handles item content changes
+sub onItemContentChanged(event as object)
+    content = event.getData()
+    if content = invalid then return
+
+    imageUrl = content.imageUrl ?? ""
+    title = content.title ?? ""
+
+    if m.cardImage <> invalid and imageUrl <> ""
+        m.cardImage.uri = imageUrl
+    end if
+
+    if m.cardTitle <> invalid
+        m.cardTitle.text = title
+    end if
+
+    updateSize()
+end sub
+
+
+' handle width/height changes
+sub onSizeChanged(event as object)
+    updateSize()
+end sub
+
+' updates component dimensions based on width/height fields
+sub updateSize()
+    width = m.top.width
+    height = m.top.height
+
+    if width = 0 then width = DEFAULT_WIDTH
+    if height = 0 then height = DEFAULT_HEIGHT
+
+    imageHeight = height - TITLE_HEIGHT
+
+    if m.cardImage <> invalid
+        m.cardImage.width = width
+        m.cardImage.height = imageHeight
+    end if
+
+    if m.cardTitle <> invalid
+        m.cardTitle.width = width
+        m.cardTitle.translation = [0, imageHeight + 5]
+    end if
+end sub
+
+' handles key events
+function onKeyEvent(key as string, press as boolean) as boolean
+    return false
+end function

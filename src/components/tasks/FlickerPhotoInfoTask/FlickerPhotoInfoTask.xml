@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<component name="FlickerPhotoInfoTask" extends="Task">
+    <interface>
+        <field id="photoId" type="string" />
+        <field id="result" type="assocarray" />
+        <field id="error" type="assocarray" />
+    </interface>
+</component>

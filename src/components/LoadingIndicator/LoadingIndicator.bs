@@ -1,0 +1,47 @@
+sub init()
+    m.busySpinner = m.top.findNode("busySpinner")
+
+    deviceInfo = CreateObject("roDeviceInfo")
+    uiResolution = deviceInfo.GetUIResolution()
+    m.screenWidth = uiResolution.width
+    m.screenHeight = uiResolution.height
+
+    m.busySpinner.poster.uri = "pkg:/images/loading_indicator.png"
+
+    m.top.observeFieldScoped("size", "onSizeChanged")
+    m.top.observeFieldScoped("isLoading", "onIsLoadingChanged")
+    m.top.observeFieldScoped("color", "onColorChanged")
+    m.top.observeFieldScoped("text", "onTextChanged")
+
+    onSizeChanged()
+end sub
+
+sub onSizeChanged()
+    size = m.top.size
+    if size = 0 then size = 100
+    m.busySpinner.poster.width = size
+    m.busySpinner.poster.height = size
+
+    centerX = (m.screenWidth / 2) - (size / 2)
+    centerY = (m.screenHeight / 2) - (size / 2)
+    m.busySpinner.translation = [centerX, centerY]
+end sub
+
+sub onIsLoadingChanged()
+    isLoading = m.top.isLoading
+
+    if m.busySpinner <> invalid
+        if isLoading
+            m.busySpinner.control = "start"
+        else
+            m.busySpinner.control = "stop"
+        end if
+    end if
+end sub
+
+sub onColorChanged(event as object)
+    color = event.getData()
+    if m.busySpinner <> invalid
+        m.busySpinner.poster.blendColor = color
+    end if
+end sub

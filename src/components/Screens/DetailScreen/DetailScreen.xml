@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<component name="DetailScreen" extends="Group">
+    <interface>
+        <field id="content" type="assocarray" onChange="onContentChanged" />
+        <field id="close" type="boolean" value="false" />
+    </interface>
+
+    <children>
+        <Rectangle id="background" />
+        <Group id="contentContainer">
+            <Poster id="detailImage" />
+            <Group id="infoPanel">
+                <Label id="titleLabel" />
+                <Label id="ownerLabel" />
+                <Label id="descriptionLabel" />
+                <Group id="imageInfoGroup">
+                    <Label id="dimensionsLabel" />
+                    <Label id="dateTakenLabel" />
+                </Group>
+            </Group>
+        </Group>
+    </children>
+</component>

@@ -1,0 +1,209 @@
+' Constants
+const LABEL_COLOR = "0xFFFFFF"
+const LABEL_FONT_SIZE = 100
+const FLICKER_TASK_NODE = "FlickerCategoryTask"
+const SCREEN_MANAGER_NODE = "ScreenManager"
+
+' Default categories to fetch from Flicker
+const DEFAULT_CATEGORIES = ["nature", "architecture", "animals", "travel", "food",
+"sports", "technology", "art", "cars", "historical"]
+
+sub init()
+    setupUI()
+    initializeState()
+    fetchAllCategories()
+end sub
+
+' Configures UI elements
+sub setupUI()
+    m.top.setFocus(true)
+    m.loadingIndicator = m.top.findNode("loadingIndicator")
+end sub
+
+' Initializes component state
+sub initializeState()
+    m.categories = DEFAULT_CATEGORIES
+    m.categoryData = {}
+end sub
+
+' Fetches Flicker data for all categories using promises.all()
+sub fetchAllCategories()
+    ' Show loading indicator
+    showLoading()
+
+    categoryPromises = []
+    for each category in m.categories
+        categoryPromises.push(createCategoryFetchPromise(category))
+    end for
+
+    allPromise = promises.all(categoryPromises)
+    promises.onThen(allPromise, handleCategoryResults)
+    promises.onCatch(allPromise, handleCategoryError)
+end sub
+
+' Creates a promise that resolves with Flicker data for a single category
+function createCategoryFetchPromise(category as string) as object
+    promise = promises.create()
+    task = createCategoryTask(category, promise)
+    task.control = "run"
+    return promise
+end function
+
+' Creates and configures a FlickerCategoryTask
+function createCategoryTask(category as string, promise as object) as object
+    task = CreateObject("roSGNode", FLICKER_TASK_NODE)
+    task.category = category
+    task.addFields({ promise: promise })
+    task.observeFieldScoped("result", "onTaskResult")
+    task.observeFieldScoped("error", "onTaskError")
+    return task
+end function
+
+' Callback when a task completes successfully
+sub onTaskResult(event as object)
+    task = event.getRoSGNode()
+    if isValidTaskWithPromise(task)
+        promises.resolve(event.getData(), task.promise)
+    end if
+end sub
+
+' Callback when a task encounters an error
+sub onTaskError(event as object)
+    task = event.getRoSGNode()
+    if isValidTaskWithPromise(task)
+        promises.reject(event.getData(), task.promise)
+    end if
+end sub
+
+' Validates that a task has an associated promise
+function isValidTaskWithPromise(task as object) as boolean
+    return task <> invalid and task.promise <> invalid
+end function
+
+' Processes successful category fetch results
+sub handleCategoryResults(results as dynamic)
+    m.categoryData = {}
+    for each result in results
+        if isValidCategoryResult(result)
+            m.categoryData[result.category] = result
+            logCategoryFetched(result)
+        end if
+    end for
+    onAllCategoriesLoaded()
+end sub
+
+' Validates a category result object
+function isValidCategoryResult(result as object) as boolean
+    return result <> invalid and result.category <> invalid
+end function
+
+' Logs successful category fetch
+sub logCategoryFetched(result as object)
+    itemCount = result.items?.count() ?? 0
+end sub
+
+' Handles category fetch errors
+sub handleCategoryError(error as dynamic)
+    print "Error fetching categories: "; error
+    hideLoading()
+    updateLabel("Error loading categories")
+end sub
+
+' Called when all category data has been loaded successfully
+sub onAllCategoriesLoaded()
+    ' Hide loading indicator
+    hideLoading()
+
+    ' Create and display the category row list
+    displayCategoryRowList()
+end sub
+
+' Creates and displays the CategoryRowList with fetched data
+sub displayCategoryRowList()
+    ' Remove existing row list if present
+    if m.categoryRowList <> invalid
+        m.top.removeChild(m.categoryRowList)
+    end if
+
+    ' Create CategoryRowList component
+    m.categoryRowList = CreateObject("roSGNode", "CategoryRowList")
+    m.categoryRowList.categoryData = m.categoryData
+
+    ' Observe item selection
+    m.categoryRowList.observeFieldScoped("selectedItem", "onItemSelected")
+
+    ' Add to scene and set focus
+    m.top.appendChild(m.categoryRowList)
+    m.categoryRowList.callFunc("setFocusToRowList")
+end sub
+
+' Called when an item is selected in the CategoryRowList
+sub onItemSelected(event as object)
+    selectedItem = event.getData()
+    if selectedItem = invalid then return
+
+    showDetailScreen(selectedItem)
+end sub
+
+' Shows the detail screen with the selected item
+sub showDetailScreen(item as object)
+    ' Create detail screen if not exists
+    if m.detailScreen = invalid
+        m.detailScreen = CreateObject("roSGNode", "DetailScreen")
+        m.detailScreen.observeFieldScoped("close", "onDetailScreenClose")
+    end if
+
+    ' Set content and show
+    m.detailScreen.content = item
+
+    ' Add to scene on top
+    m.top.appendChild(m.detailScreen)
+    m.detailScreen.setFocus(true)
+
+    ' Hide the category list
+    if m.categoryRowList <> invalid
+        m.categoryRowList.visible = false
+    end if
+end sub
+
+' Called when detail screen requests to close
+sub onDetailScreenClose(event as object)
+    shouldClose = event.getData()
+    if not shouldClose then return
+
+    ' Remove detail screen
+    if m.detailScreen <> invalid
+        m.top.removeChild(m.detailScreen)
+        m.detailScreen.close = false ' Reset for next use
+    end if
+
+    ' Show and focus category list
+    if m.categoryRowList <> invalid
+        m.categoryRowList.visible = true
+        m.categoryRowList.callFunc("setFocusToRowList")
+    end if
+end sub
+
+' Updates the main label text
+sub updateLabel(text as string)
+    if m.mainLabel <> invalid
+        m.mainLabel.visible = true
+        m.mainLabel.text = text
+    end if
+end sub
+
+' Shows the loading indicator with optional text
+sub showLoading()
+    if m.loadingIndicator <> invalid
+        m.loadingIndicator.isLoading = true
+        m.loadingIndicator.visible = true
+    end if
+end sub
+
+' Hides the loading indicator
+sub hideLoading()
+    if m.loadingIndicator <> invalid
+        m.loadingIndicator.isLoading = false
+        m.loadingIndicator.visible = false
+    end if
+end sub

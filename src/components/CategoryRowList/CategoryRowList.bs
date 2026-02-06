@@ -1,0 +1,168 @@
+' constants
+const ROW_LIST_TRANSLATION = [80, 100]
+const DEFAULT_CARD_WIDTH = 300
+const DEFAULT_CARD_HEIGHT = 240
+
+' rowList styling constants
+const ROW_LIST_NUM_ROWS = 2
+const ROW_LIST_ITEM_SIZE = [1760, 300]
+const ROW_LIST_ROW_ITEM_SPACING = [[40, 0]]
+const ROW_LIST_ITEM_SPACING = [0, 40]
+const ROW_LIST_SHOW_ROW_LABEL = [true]
+const ROW_LIST_ROW_LABEL_OFFSET = [[0, 20]]
+
+sub init()
+    setupNodes()
+    applyStyles()
+    configureRowList()
+end sub
+
+sub setupNodes()
+    m.rowList = m.top.findNode("rowList")
+    if m.rowList <> invalid
+        m.rowList.observeFieldScoped("rowItemSelected", "onItemSelected")
+    end if
+    m.itemsData = {}
+end sub
+
+sub applyStyles()
+    if m.rowList = invalid then return
+
+    m.rowList.translation = ROW_LIST_TRANSLATION
+    m.rowList.itemComponentName = "Card"
+    m.rowList.numRows = ROW_LIST_NUM_ROWS
+    m.rowList.itemSize = ROW_LIST_ITEM_SIZE
+    m.rowList.rowItemSpacing = ROW_LIST_ROW_ITEM_SPACING
+    m.rowList.itemSpacing = ROW_LIST_ITEM_SPACING
+    m.rowList.showRowLabel = ROW_LIST_SHOW_ROW_LABEL
+    m.rowList.rowLabelOffset = ROW_LIST_ROW_LABEL_OFFSET
+    m.rowList.rowLabelFont = "font:LargeBoldSystemFont"
+    m.rowList.drawFocusFeedback = true
+    m.rowList.vertFocusAnimationStyle = "fixedFocus"
+    m.rowList.rowFocusAnimationStyle = "fixedFocus"
+end sub
+
+sub configureRowList()
+    if m.rowList = invalid then return
+
+    m.rowList.rowItemSize = [[DEFAULT_CARD_WIDTH, DEFAULT_CARD_HEIGHT]]
+end sub
+
+' handles category data changes and updates RowList content
+sub onCategoryDataChanged(event as object)
+    categoryData = event.getData()
+
+    if categoryData = invalid or m.rowList = invalid
+        return
+    end if
+
+    m.categoryData = categoryData
+    content = createRowListContent(categoryData)
+    m.rowList.content = content
+end sub
+
+' handles item selected
+sub onItemSelected(event as object)
+    selectedIndices = event.getData()
+    if selectedIndices = invalid or selectedIndices.count() < 2 then return
+
+    rowIndex = selectedIndices[0]
+    itemIndex = selectedIndices[1]
+
+    content = m.rowList.content
+    if content = invalid then return
+
+    rowNode = content.getChild(rowIndex)
+    if rowNode = invalid then return
+
+    itemNode = rowNode.getChild(itemIndex)
+    if itemNode = invalid then return
+
+    selectedItem = {
+        id: getFieldSafe(itemNode, "photoId")
+        title: getFieldSafe(itemNode, "title")
+        imageUrl: getFieldSafe(itemNode, "imageUrl")
+        urlMedium: getFieldSafe(itemNode, "urlMedium")
+        urlLarge: getFieldSafe(itemNode, "urlLarge")
+        owner: getFieldSafe(itemNode, "owner")
+        ownerName: getFieldSafe(itemNode, "ownerName")
+        dateTaken: getFieldSafe(itemNode, "dateTaken")
+    }
+
+    m.top.selectedItem = selectedItem
+end sub
+
+function createRowListContent(categoryData as object) as object
+    content = CreateObject("roSGNode", "ContentNode")
+
+    for each categoryName in categoryData
+        category = categoryData[categoryName]
+        rowNode = createCategoryRow(categoryName, category)
+        content.appendChild(rowNode)
+    end for
+
+    return content
+end function
+
+function createCategoryRow(categoryName as string, categoryResult as object) as object
+    rowNode = CreateObject("roSGNode", "ContentNode")
+    rowNode.title = capitalizeFirst(categoryName)
+
+    items = categoryResult.items
+    if items <> invalid
+        for each item in items
+            cardNode = createCardContentNode(item)
+            rowNode.appendChild(cardNode)
+        end for
+    end if
+
+    return rowNode
+end function
+
+function createCardContentNode(item as object) as object
+    cardNode = CreateObject("roSGNode", "ContentNode")
+
+    cardNode.addFields({
+        photoId: item.id ?? ""
+        imageUrl: item.urlMedium ?? item.urlLarge ?? ""
+        title: item.title ?? ""
+        urlMedium: item.urlMedium ?? ""
+        urlLarge: item.urlLarge ?? ""
+        owner: item.owner ?? ""
+        ownerName: item.ownerName ?? ""
+        dateTaken: item.dateTaken ?? ""
+    })
+
+    return cardNode
+end function
+
+' capitalizes the first letter of a string
+function capitalizeFirst(text as string) as string
+    if text.len() = 0 then return text
+    return uCase(text.left(1)) + text.mid(1)
+end function
+
+' safely gets a field value from a node, returns empty string if not found
+function getFieldSafe(node as object, fieldName as string) as dynamic
+    if node = invalid then return ""
+    if node.hasField(fieldName)
+        return node.getField(fieldName)
+    end if
+    return ""
+end function
+
+function onKeyEvent(key as string, press as boolean) as boolean
+    if not press then return false
+
+    if m.rowList <> invalid and m.rowList.hasFocus()
+        return true
+    end if
+
+    return false
+end function
+
+sub setFocusToRowList()
+    if m.rowList <> invalid
+        m.rowList.setFocus(true)
+    end if
+end sub

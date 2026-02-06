@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<component name="LoadingIndicator" extends="Group">
+    <interface>
+        <field id="size" type="integer" value="100" />
+        <field id="color" type="color" value="0xFFFFFFFF" />
+        <field id="isLoading" type="boolean" value="false" />
+    </interface>
+
+    <children>
+        <BusySpinner id="busySpinner" spinInterval="1" />
+    </children>
+</component>

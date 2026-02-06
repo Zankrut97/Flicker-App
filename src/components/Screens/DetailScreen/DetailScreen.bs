@@ -1,0 +1,221 @@
+' layout constants
+const SCREEN_WIDTH = 1920
+const SCREEN_HEIGHT = 1080
+const CONTENT_MARGIN = 100
+const CONTENT_TOP = 80
+
+' image constants
+const IMAGE_WIDTH = 600
+const IMAGE_HEIGHT = 400
+const PLACEHOLDER_IMAGE = "pkg:/images/placeholder.png"
+
+' info panel constants
+const INFO_PANEL_X = 650
+const INFO_PANEL_WIDTH = 400
+
+' typography constants
+const TITLE_FONT = "font:LargeBoldSystemFont"
+const BODY_FONT = "font:SmallSystemFont"
+const COLOR_WHITE = "0xFFFFFFFF"
+const COLOR_LIGHT_GRAY = "0xAAAAAAFF"
+const COLOR_GRAY = "0xCCCCCCFF"
+const COLOR_DARK_GRAY = "0x888888FF"
+const COLOR_BLACK = "0x000000FF"
+
+sub init()
+    setupNodes()
+    applyStyles()
+    setupInfoTask()
+end sub
+
+sub setupNodes()
+    m.background = m.top.findNode("background")
+    m.contentContainer = m.top.findNode("contentContainer")
+    m.detailImage = m.top.findNode("detailImage")
+    m.infoPanel = m.top.findNode("infoPanel")
+    m.titleLabel = m.top.findNode("titleLabel")
+    m.ownerLabel = m.top.findNode("ownerLabel")
+    m.descriptionLabel = m.top.findNode("descriptionLabel")
+    m.imageInfoGroup = m.top.findNode("imageInfoGroup")
+    m.dimensionsLabel = m.top.findNode("dimensionsLabel")
+    m.dateTakenLabel = m.top.findNode("dateTakenLabel")
+end sub
+
+sub applyStyles()
+    if m.background <> invalid
+        m.background.width = SCREEN_WIDTH
+        m.background.height = SCREEN_HEIGHT
+        m.background.color = COLOR_BLACK
+    end if
+
+    if m.contentContainer <> invalid
+        m.contentContainer.translation = [CONTENT_MARGIN, CONTENT_TOP]
+    end if
+
+    if m.detailImage <> invalid
+        m.detailImage.width = IMAGE_WIDTH
+        m.detailImage.height = IMAGE_HEIGHT
+        m.detailImage.loadDisplayMode = "scaleToZoom"
+        m.detailImage.loadingBitmapUri = PLACEHOLDER_IMAGE
+    end if
+
+    if m.infoPanel <> invalid
+        m.infoPanel.translation = [INFO_PANEL_X, 0]
+    end if
+
+    if m.titleLabel <> invalid
+        m.titleLabel.width = INFO_PANEL_WIDTH
+        m.titleLabel.font = TITLE_FONT
+        m.titleLabel.color = COLOR_WHITE
+        m.titleLabel.wrap = true
+        m.titleLabel.maxLines = 2
+        m.titleLabel.ellipsizeOnBoundary = true
+    end if
+
+    if m.ownerLabel <> invalid
+        m.ownerLabel.translation = [0, 80]
+        m.ownerLabel.width = INFO_PANEL_WIDTH
+        m.ownerLabel.font = BODY_FONT
+        m.ownerLabel.color = COLOR_LIGHT_GRAY
+        m.ownerLabel.maxLines = 1
+        m.ownerLabel.ellipsizeOnBoundary = true
+    end if
+
+    if m.descriptionLabel <> invalid
+        m.descriptionLabel.translation = [0, 130]
+        m.descriptionLabel.width = INFO_PANEL_WIDTH
+        m.descriptionLabel.height = 300
+        m.descriptionLabel.font = BODY_FONT
+        m.descriptionLabel.color = COLOR_GRAY
+        m.descriptionLabel.wrap = true
+        m.descriptionLabel.maxLines = 10
+        m.descriptionLabel.ellipsizeOnBoundary = true
+    end if
+
+    if m.imageInfoGroup <> invalid
+        m.imageInfoGroup.translation = [0, 450]
+    end if
+
+    if m.dimensionsLabel <> invalid
+        m.dimensionsLabel.width = INFO_PANEL_WIDTH
+        m.dimensionsLabel.font = BODY_FONT
+        m.dimensionsLabel.color = COLOR_DARK_GRAY
+        m.dimensionsLabel.maxLines = 1
+        m.dimensionsLabel.ellipsizeOnBoundary = true
+    end if
+
+    if m.dateTakenLabel <> invalid
+        m.dateTakenLabel.translation = [0, 35]
+        m.dateTakenLabel.width = INFO_PANEL_WIDTH
+        m.dateTakenLabel.font = BODY_FONT
+        m.dateTakenLabel.color = COLOR_DARK_GRAY
+        m.dateTakenLabel.maxLines = 1
+        m.dateTakenLabel.ellipsizeOnBoundary = true
+    end if
+end sub
+
+sub setupInfoTask()
+    m.infoTask = CreateObject("roSGNode", "FlickerPhotoInfoTask")
+    m.infoTask.observeFieldScoped("result", "onPhotoInfoResult")
+    m.infoTask.observeFieldScoped("error", "onPhotoInfoError")
+end sub
+
+sub onContentChanged(event as object)
+    content = event.getData()
+    if content = invalid then return
+
+    m.currentContent = content
+
+    if m.detailImage <> invalid
+        imageUrl = content.urlLarge ?? content.urlMedium ?? ""
+        m.detailImage.uri = imageUrl
+    end if
+
+    if m.titleLabel <> invalid
+        m.titleLabel.text = content.title ?? "Untitled"
+    end if
+
+    if m.ownerLabel <> invalid
+        ownerName = content.ownerName ?? content.owner ?? ""
+        m.ownerLabel.text = "By: " + ownerName
+    end if
+
+    if m.dateTakenLabel <> invalid
+        dateTaken = content.dateTaken ?? ""
+        if dateTaken <> ""
+            m.dateTakenLabel.text = "Taken: " + dateTaken
+        else
+            m.dateTakenLabel.text = ""
+        end if
+    end if
+
+    ' clear previous details
+    if m.descriptionLabel <> invalid
+        m.descriptionLabel.text = ""
+    end if
+    if m.dimensionsLabel <> invalid
+        m.dimensionsLabel.text = "Loading image details..."
+    end if
+
+    ' fetch additional photo info
+    photoId = content.id
+    if photoId <> invalid and photoId <> ""
+        fetchPhotoInfo(photoId)
+    else
+        if m.dimensionsLabel <> invalid
+            m.dimensionsLabel.text = ""
+        end if
+    end if
+end sub
+
+sub fetchPhotoInfo(photoId as string)
+    if photoId = "" then return
+
+    m.infoTask.photoId = photoId
+    m.infoTask.control = "run"
+end sub
+
+sub onPhotoInfoResult(event as object)
+    result = event.getData()
+    if result = invalid then return
+
+    ' update description
+    if m.descriptionLabel <> invalid
+        description = result.description ?? ""
+        if description = ""
+            description = "No description available"
+        end if
+        m.descriptionLabel.text = description
+    end if
+
+    ' update dimensions
+    if m.dimensionsLabel <> invalid
+        width = result.width ?? 0
+        height = result.height ?? 0
+        if width > 0 and height > 0
+            m.dimensionsLabel.text = "Dimensions: " + width.toStr() + " x " + height.toStr() + " pixels"
+        else
+            m.dimensionsLabel.text = ""
+        end if
+    end if
+end sub
+
+sub onPhotoInfoError(event as object)
+    print "DetailScreen: onPhotoInfoError called"
+    print "DetailScreen: error = "; event.getData()
+
+    if m.dimensionsLabel <> invalid
+        m.dimensionsLabel.text = "Could not load image details"
+    end if
+end sub
+
+function onKeyEvent(key as string, press as boolean) as boolean
+    if not press then return false
+
+    if key = "back"
+        m.top.close = true
+        return true
+    end if
+
+    return false
+end function

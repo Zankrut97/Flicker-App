@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<component name="CategoryRowList" extends="Group">
+    <interface>
+        <field id="categoryData" type="assocarray" onChange="onCategoryDataChanged" />
+        <field id="selectedItem" type="assocarray" alwaysNotify="true" />
+        <function name="setFocusToRowList" />
+    </interface>
+
+    <children>
+        <RowList id="rowList" />
+    </children>
+</component>

@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<component name="Card" extends="Group">
+    <interface>
+        <field id="itemContent" type="node" onChange="onItemContentChanged" />
+        <field id="width" type="integer" value="300" onChange="onSizeChanged" />
+        <field id="height" type="integer" value="250" onChange="onSizeChanged" />
+    </interface>
+
+    <children>
+        <Group id="cardContainer">
+            <Poster id="cardImage" />
+        </Group>
+        <Label id="cardTitle" />
+    </children>
+</component>

@@ -1,0 +1,75 @@
+sub init()
+    m.top.functionName = "fetchPhotoInfo"
+    m.apiKey = "452b3b7a5d806dcd110842e6649c604d"
+    m.baseUrl = "https://api.flickr.com/services/rest/"
+end sub
+
+sub fetchPhotoInfo()
+    photoId = m.top.photoId
+    if photoId = invalid or photoId = ""
+        m.top.error = { message: "Photo ID is required" }
+        return
+    end if
+
+    ' fetch photo info (description, dates, etc.)
+    infoUrl = m.baseUrl + "?method=flickr.photos.getInfo"
+    infoUrl += "&api_key=" + m.apiKey
+    infoUrl += "&photo_id=" + photoId
+    infoUrl += "&format=json"
+    infoUrl += "&nojsoncallback=1"
+
+    infoResponse = makeRequest(infoUrl)
+
+    ' fetch photo sizes
+    sizesUrl = m.baseUrl + "?method=flickr.photos.getSizes"
+    sizesUrl += "&api_key=" + m.apiKey
+    sizesUrl += "&photo_id=" + photoId
+    sizesUrl += "&format=json"
+    sizesUrl += "&nojsoncallback=1"
+
+    sizesResponse = makeRequest(sizesUrl)
+
+    ' parse and combine results
+    result = {}
+
+    ' parse info response
+    if infoResponse <> invalid
+        infoJson = parseJson(infoResponse)
+        if infoJson <> invalid and infoJson.stat = "ok"
+            photo = infoJson.photo
+            if photo <> invalid
+                result.description = photo.description?._content ?? ""
+                result.dateTaken = photo.dates?.taken ?? ""
+                result.views = photo.views ?? 0
+            end if
+        end if
+    end if
+
+    ' parse sizes response
+    if sizesResponse <> invalid
+        sizesJson = parseJson(sizesResponse)
+        if sizesJson <> invalid and sizesJson.stat = "ok"
+            sizes = sizesJson.sizes?.size
+            if sizes <> invalid and sizes.count() > 0
+                ' Get the largest size (usually "Original" or last in list)
+                largestSize = sizes[sizes.count() - 1]
+                ' Width/height come as integers from Flicker API
+                result.width = largestSize.width ?? 0
+                result.height = largestSize.height ?? 0
+                result.largeUrl = largestSize.source ?? ""
+            end if
+        end if
+    end if
+
+    m.top.result = result
+end sub
+
+function makeRequest(url as string) as dynamic
+    request = createObject("roUrlTransfer")
+    request.setUrl(url)
+    request.setCertificatesFile("common:/certs/ca-bundle.crt")
+    request.initClientCertificates()
+
+    response = request.getToString()
+    return response
+end function

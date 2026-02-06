@@ -1,0 +1,68 @@
+sub init()
+    m.top.functionName = "fetchFlickerData"
+    m.apiKey = "452b3b7a5d806dcd110842e6649c604d"
+    m.baseUrl = "https://api.flickr.com/services/rest/"
+end sub
+
+sub fetchFlickerData()
+    category = m.top.category
+    if category = invalid or category = ""
+        m.top.error = { message: "Category is required" }
+        return
+    end if
+
+    url = m.baseUrl + "?method=flickr.photos.search"
+    url += "&api_key=" + m.apiKey
+    url += "&tags=" + encodeUrl(category)
+    url += "&format=json"
+    url += "&nojsoncallback=1"
+    url += "&per_page=20"
+    url += "&extras=url_m,url_l,title,description,owner_name,date_taken"
+    url += "&safe_search=1"
+
+    request = createObject("roUrlTransfer")
+    request.setUrl(url)
+    request.setCertificatesFile("common:/certs/ca-bundle.crt")
+    request.initClientCertificates()
+
+    response = request.getToString()
+
+    if response <> invalid and response <> ""
+        json = parseJson(response)
+        if json <> invalid and json.stat = "ok"
+            photos = json.photos.photo
+            items = []
+            for each photo in photos
+                item = {
+                    id: photo.id
+                    title: photo.title
+                    owner: photo.owner
+                    ownerName: photo.ownername
+                    urlMedium: photo.url_m
+                    urlLarge: photo.url_l
+                    dateTaken: photo.datetaken
+                }
+                items.push(item)
+            end for
+            m.top.result = {
+                category: category
+                items: items
+                total: json.photos.total
+                page: json.photos.page
+                pages: json.photos.pages
+            }
+        else if json <> invalid and json.stat = "fail"
+            m.top.error = { message: "Flickr API error: " + json.message, code: json.code }
+        else
+            m.top.error = { message: "Failed to parse Flickr response" }
+        end if
+    else
+        m.top.error = { message: "Failed to fetch Flickr data for category: " + category }
+    end if
+end sub
+
+' Helper function to URL encode a string
+function encodeUrl(str as string) as string
+    encoder = createObject("roUrlTransfer")
+    return encoder.escape(str)
+end function
